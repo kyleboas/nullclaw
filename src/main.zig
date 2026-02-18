@@ -1,6 +1,15 @@
 const std = @import("std");
 const yc = @import("nullclaw");
 
+pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
+    _ = error_return_trace;
+    _ = ret_addr;
+    std.fs.File.stderr().writeAll("panic: ") catch {};
+    std.fs.File.stderr().writeAll(msg) catch {};
+    std.fs.File.stderr().writeAll("\n") catch {};
+    std.process.exit(1);
+}
+
 const log = std.log.scoped(.main);
 
 const Command = enum {

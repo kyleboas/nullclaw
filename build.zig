@@ -53,6 +53,7 @@ pub fn build(b: *std.Build) void {
     exe.linkLibC();
 
     b.installArtifact(exe);
+    exe.root_module.strip = optimize != .Debug;
 
     // ---------- run step ----------
     const run_step = b.step("run", "Run nullclaw");

@@ -221,7 +221,7 @@ pub fn parseToolsListResponse(allocator: Allocator, resp: []const u8) ![]McpTool
         // Serialize inputSchema back to JSON string
         const schema_val = item.object.get("inputSchema");
         const schema_str = if (schema_val) |s| blk: {
-            break :blk std.fmt.allocPrint(allocator, "{f}", .{std.json.fmt(s, .{})}) catch "{}";
+            break :blk try std.fmt.allocPrint(allocator, "{f}", .{std.json.fmt(s, .{})});
         } else "{}";
 
         try list.append(allocator, .{
@@ -330,7 +330,7 @@ pub fn initMcpTools(allocator: Allocator, configs: []const McpServerConfig) ![]t
     errdefer all_tools.deinit(allocator);
 
     for (configs) |cfg| {
-        var server = allocator.create(McpServer) catch continue;
+        var server = try allocator.create(McpServer);
         server.* = McpServer.init(allocator, cfg);
 
         server.connect() catch |err| {
@@ -347,11 +347,14 @@ pub fn initMcpTools(allocator: Allocator, configs: []const McpServerConfig) ![]t
         };
 
         for (tool_defs) |td| {
-            var wrapper = allocator.create(McpToolWrapper) catch continue;
+            var wrapper = try allocator.create(McpToolWrapper);
+            errdefer allocator.destroy(wrapper);
+            const prefixed_name = try std.fmt.allocPrint(allocator, "mcp_{s}_{s}", .{ cfg.name, td.name });
+            errdefer allocator.free(prefixed_name);
             wrapper.* = .{
                 .server = server,
                 .original_name = td.name,
-                .prefixed_name = std.fmt.allocPrint(allocator, "mcp_{s}_{s}", .{ cfg.name, td.name }) catch continue,
+                .prefixed_name = prefixed_name,
                 .desc = td.description,
                 .params_json = td.input_schema,
             };

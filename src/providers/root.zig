@@ -749,64 +749,104 @@ pub fn detectProviderByApiKey(key: []const u8) ProviderKind {
 
 /// Get the base URL for an OpenAI-compatible provider by name.
 pub fn compatibleProviderUrl(name: []const u8) ?[]const u8 {
-    if (std.mem.eql(u8, name, "venice")) return "https://api.venice.ai";
-    if (std.mem.eql(u8, name, "vercel") or std.mem.eql(u8, name, "vercel-ai")) return "https://api.vercel.ai";
-    if (std.mem.eql(u8, name, "cloudflare") or std.mem.eql(u8, name, "cloudflare-ai")) return "https://gateway.ai.cloudflare.com/v1";
-    if (std.mem.eql(u8, name, "moonshot") or std.mem.eql(u8, name, "kimi")) return "https://api.moonshot.cn";
-    if (std.mem.eql(u8, name, "synthetic")) return "https://api.synthetic.com";
-    if (std.mem.eql(u8, name, "opencode") or std.mem.eql(u8, name, "opencode-zen")) return "https://api.opencode.ai";
-    if (std.mem.eql(u8, name, "zai") or std.mem.eql(u8, name, "z.ai")) return "https://api.z.ai/api/coding/paas/v4";
-    if (std.mem.eql(u8, name, "glm") or std.mem.eql(u8, name, "zhipu")) return "https://api.z.ai/api/paas/v4";
-    if (std.mem.eql(u8, name, "minimax")) return "https://api.minimaxi.com/v1";
-    if (std.mem.eql(u8, name, "bedrock") or std.mem.eql(u8, name, "aws-bedrock")) return "https://bedrock-runtime.us-east-1.amazonaws.com";
-    if (std.mem.eql(u8, name, "qianfan") or std.mem.eql(u8, name, "baidu")) return "https://aip.baidubce.com";
-    if (std.mem.eql(u8, name, "qwen") or std.mem.eql(u8, name, "dashscope")) return "https://dashscope.aliyuncs.com/compatible-mode/v1";
-    if (std.mem.eql(u8, name, "qwen-intl") or std.mem.eql(u8, name, "dashscope-intl")) return "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
-    if (std.mem.eql(u8, name, "qwen-us") or std.mem.eql(u8, name, "dashscope-us")) return "https://dashscope-us.aliyuncs.com/compatible-mode/v1";
-    if (std.mem.eql(u8, name, "groq")) return "https://api.groq.com/openai";
-    if (std.mem.eql(u8, name, "mistral")) return "https://api.mistral.ai";
-    if (std.mem.eql(u8, name, "xai") or std.mem.eql(u8, name, "grok")) return "https://api.x.ai";
-    if (std.mem.eql(u8, name, "deepseek")) return "https://api.deepseek.com";
-    if (std.mem.eql(u8, name, "together") or std.mem.eql(u8, name, "together-ai")) return "https://api.together.xyz";
-    if (std.mem.eql(u8, name, "fireworks") or std.mem.eql(u8, name, "fireworks-ai")) return "https://api.fireworks.ai/inference/v1";
-    if (std.mem.eql(u8, name, "perplexity")) return "https://api.perplexity.ai";
-    if (std.mem.eql(u8, name, "cohere")) return "https://api.cohere.com/compatibility";
-    if (std.mem.eql(u8, name, "copilot") or std.mem.eql(u8, name, "github-copilot")) return "https://api.githubcopilot.com";
-    if (std.mem.eql(u8, name, "lmstudio") or std.mem.eql(u8, name, "lm-studio")) return "http://localhost:1234/v1";
-    if (std.mem.eql(u8, name, "nvidia") or std.mem.eql(u8, name, "nvidia-nim") or std.mem.eql(u8, name, "build.nvidia.com")) return "https://integrate.api.nvidia.com/v1";
-    if (std.mem.eql(u8, name, "astrai")) return "https://as-trai.com/v1";
-    return null;
+    const map = std.StaticStringMap([]const u8).initComptime(.{
+        .{ "venice", "https://api.venice.ai" },
+        .{ "vercel", "https://api.vercel.ai" },
+        .{ "vercel-ai", "https://api.vercel.ai" },
+        .{ "cloudflare", "https://gateway.ai.cloudflare.com/v1" },
+        .{ "cloudflare-ai", "https://gateway.ai.cloudflare.com/v1" },
+        .{ "moonshot", "https://api.moonshot.cn" },
+        .{ "kimi", "https://api.moonshot.cn" },
+        .{ "synthetic", "https://api.synthetic.com" },
+        .{ "opencode", "https://api.opencode.ai" },
+        .{ "opencode-zen", "https://api.opencode.ai" },
+        .{ "zai", "https://api.z.ai/api/coding/paas/v4" },
+        .{ "z.ai", "https://api.z.ai/api/coding/paas/v4" },
+        .{ "glm", "https://api.z.ai/api/paas/v4" },
+        .{ "zhipu", "https://api.z.ai/api/paas/v4" },
+        .{ "minimax", "https://api.minimaxi.com/v1" },
+        .{ "bedrock", "https://bedrock-runtime.us-east-1.amazonaws.com" },
+        .{ "aws-bedrock", "https://bedrock-runtime.us-east-1.amazonaws.com" },
+        .{ "qianfan", "https://aip.baidubce.com" },
+        .{ "baidu", "https://aip.baidubce.com" },
+        .{ "qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1" },
+        .{ "dashscope", "https://dashscope.aliyuncs.com/compatible-mode/v1" },
+        .{ "qwen-intl", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1" },
+        .{ "dashscope-intl", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1" },
+        .{ "qwen-us", "https://dashscope-us.aliyuncs.com/compatible-mode/v1" },
+        .{ "dashscope-us", "https://dashscope-us.aliyuncs.com/compatible-mode/v1" },
+        .{ "groq", "https://api.groq.com/openai" },
+        .{ "mistral", "https://api.mistral.ai" },
+        .{ "xai", "https://api.x.ai" },
+        .{ "grok", "https://api.x.ai" },
+        .{ "deepseek", "https://api.deepseek.com" },
+        .{ "together", "https://api.together.xyz" },
+        .{ "together-ai", "https://api.together.xyz" },
+        .{ "fireworks", "https://api.fireworks.ai/inference/v1" },
+        .{ "fireworks-ai", "https://api.fireworks.ai/inference/v1" },
+        .{ "perplexity", "https://api.perplexity.ai" },
+        .{ "cohere", "https://api.cohere.com/compatibility" },
+        .{ "copilot", "https://api.githubcopilot.com" },
+        .{ "github-copilot", "https://api.githubcopilot.com" },
+        .{ "lmstudio", "http://localhost:1234/v1" },
+        .{ "lm-studio", "http://localhost:1234/v1" },
+        .{ "nvidia", "https://integrate.api.nvidia.com/v1" },
+        .{ "nvidia-nim", "https://integrate.api.nvidia.com/v1" },
+        .{ "build.nvidia.com", "https://integrate.api.nvidia.com/v1" },
+        .{ "astrai", "https://as-trai.com/v1" },
+    });
+    return map.get(name);
 }
 
 /// Get the display name for an OpenAI-compatible provider.
 pub fn compatibleProviderDisplayName(name: []const u8) []const u8 {
-    if (std.mem.eql(u8, name, "venice")) return "Venice";
-    if (std.mem.eql(u8, name, "vercel") or std.mem.eql(u8, name, "vercel-ai")) return "Vercel AI Gateway";
-    if (std.mem.eql(u8, name, "cloudflare") or std.mem.eql(u8, name, "cloudflare-ai")) return "Cloudflare AI Gateway";
-    if (std.mem.eql(u8, name, "moonshot") or std.mem.eql(u8, name, "kimi")) return "Moonshot";
-    if (std.mem.eql(u8, name, "synthetic")) return "Synthetic";
-    if (std.mem.eql(u8, name, "opencode") or std.mem.eql(u8, name, "opencode-zen")) return "OpenCode Zen";
-    if (std.mem.eql(u8, name, "zai") or std.mem.eql(u8, name, "z.ai")) return "Z.AI";
-    if (std.mem.eql(u8, name, "glm") or std.mem.eql(u8, name, "zhipu")) return "GLM";
-    if (std.mem.eql(u8, name, "minimax")) return "MiniMax";
-    if (std.mem.eql(u8, name, "bedrock") or std.mem.eql(u8, name, "aws-bedrock")) return "Amazon Bedrock";
-    if (std.mem.eql(u8, name, "qianfan") or std.mem.eql(u8, name, "baidu")) return "Qianfan";
-    if (std.mem.eql(u8, name, "qwen") or std.mem.eql(u8, name, "dashscope") or
-        std.mem.eql(u8, name, "qwen-intl") or std.mem.eql(u8, name, "dashscope-intl") or
-        std.mem.eql(u8, name, "qwen-us") or std.mem.eql(u8, name, "dashscope-us")) return "Qwen";
-    if (std.mem.eql(u8, name, "groq")) return "Groq";
-    if (std.mem.eql(u8, name, "mistral")) return "Mistral";
-    if (std.mem.eql(u8, name, "xai") or std.mem.eql(u8, name, "grok")) return "xAI";
-    if (std.mem.eql(u8, name, "deepseek")) return "DeepSeek";
-    if (std.mem.eql(u8, name, "together") or std.mem.eql(u8, name, "together-ai")) return "Together AI";
-    if (std.mem.eql(u8, name, "fireworks") or std.mem.eql(u8, name, "fireworks-ai")) return "Fireworks AI";
-    if (std.mem.eql(u8, name, "perplexity")) return "Perplexity";
-    if (std.mem.eql(u8, name, "cohere")) return "Cohere";
-    if (std.mem.eql(u8, name, "copilot") or std.mem.eql(u8, name, "github-copilot")) return "GitHub Copilot";
-    if (std.mem.eql(u8, name, "lmstudio") or std.mem.eql(u8, name, "lm-studio")) return "LM Studio";
-    if (std.mem.eql(u8, name, "nvidia") or std.mem.eql(u8, name, "nvidia-nim") or std.mem.eql(u8, name, "build.nvidia.com")) return "NVIDIA NIM";
-    if (std.mem.eql(u8, name, "astrai")) return "Astrai";
-    return "Custom";
+    const map = std.StaticStringMap([]const u8).initComptime(.{
+        .{ "venice", "Venice" },
+        .{ "vercel", "Vercel AI Gateway" },
+        .{ "vercel-ai", "Vercel AI Gateway" },
+        .{ "cloudflare", "Cloudflare AI Gateway" },
+        .{ "cloudflare-ai", "Cloudflare AI Gateway" },
+        .{ "moonshot", "Moonshot" },
+        .{ "kimi", "Moonshot" },
+        .{ "synthetic", "Synthetic" },
+        .{ "opencode", "OpenCode Zen" },
+        .{ "opencode-zen", "OpenCode Zen" },
+        .{ "zai", "Z.AI" },
+        .{ "z.ai", "Z.AI" },
+        .{ "glm", "GLM" },
+        .{ "zhipu", "GLM" },
+        .{ "minimax", "MiniMax" },
+        .{ "bedrock", "Amazon Bedrock" },
+        .{ "aws-bedrock", "Amazon Bedrock" },
+        .{ "qianfan", "Qianfan" },
+        .{ "baidu", "Qianfan" },
+        .{ "qwen", "Qwen" },
+        .{ "dashscope", "Qwen" },
+        .{ "qwen-intl", "Qwen" },
+        .{ "dashscope-intl", "Qwen" },
+        .{ "qwen-us", "Qwen" },
+        .{ "dashscope-us", "Qwen" },
+        .{ "groq", "Groq" },
+        .{ "mistral", "Mistral" },
+        .{ "xai", "xAI" },
+        .{ "grok", "xAI" },
+        .{ "deepseek", "DeepSeek" },
+        .{ "together", "Together AI" },
+        .{ "together-ai", "Together AI" },
+        .{ "fireworks", "Fireworks AI" },
+        .{ "fireworks-ai", "Fireworks AI" },
+        .{ "perplexity", "Perplexity" },
+        .{ "cohere", "Cohere" },
+        .{ "copilot", "GitHub Copilot" },
+        .{ "github-copilot", "GitHub Copilot" },
+        .{ "lmstudio", "LM Studio" },
+        .{ "lm-studio", "LM Studio" },
+        .{ "nvidia", "NVIDIA NIM" },
+        .{ "nvidia-nim", "NVIDIA NIM" },
+        .{ "build.nvidia.com", "NVIDIA NIM" },
+        .{ "astrai", "Astrai" },
+    });
+    return map.get(name) orelse "Custom";
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -885,17 +925,14 @@ pub fn completeWithSystem(allocator: std.mem.Allocator, cfg: anytype, system_pro
 
 /// Provider URL mapping for the legacy complete() function.
 pub fn providerUrl(provider_name: []const u8) []const u8 {
-    if (std.mem.eql(u8, provider_name, "anthropic")) {
-        return "https://api.anthropic.com/v1/messages";
-    } else if (std.mem.eql(u8, provider_name, "openai")) {
-        return "https://api.openai.com/v1/chat/completions";
-    } else if (std.mem.eql(u8, provider_name, "ollama")) {
-        return "http://localhost:11434/api/chat";
-    } else if (std.mem.eql(u8, provider_name, "gemini") or std.mem.eql(u8, provider_name, "google")) {
-        return "https://generativelanguage.googleapis.com/v1beta";
-    } else {
-        return "https://openrouter.ai/api/v1/chat/completions";
-    }
+    const map = std.StaticStringMap([]const u8).initComptime(.{
+        .{ "anthropic", "https://api.anthropic.com/v1/messages" },
+        .{ "openai", "https://api.openai.com/v1/chat/completions" },
+        .{ "ollama", "http://localhost:11434/api/chat" },
+        .{ "gemini", "https://generativelanguage.googleapis.com/v1beta" },
+        .{ "google", "https://generativelanguage.googleapis.com/v1beta" },
+    });
+    return map.get(provider_name) orelse "https://openrouter.ai/api/v1/chat/completions";
 }
 
 /// Build a JSON request body for the legacy complete() function.

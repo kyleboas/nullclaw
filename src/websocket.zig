@@ -39,6 +39,7 @@ pub const TlsState = struct {
     write_buf: []u8,
     tls_read_buf: []u8,
     tls_write_buf: []u8,
+    scratch: [4096]u8 = undefined,
 
     pub fn deinit(self: *TlsState, allocator: std.mem.Allocator) void {
         allocator.free(self.read_buf);
@@ -289,7 +290,7 @@ pub const WsClient = struct {
         try self.tls.tls_client.writer.writeAll(header[0..hlen]);
 
         // Write masked payload in chunks
-        var chunk_buf: [4096]u8 = undefined;
+        const chunk_buf = &self.tls.scratch;
         var offset: usize = 0;
         while (offset < plen) {
             const chunk_len = @min(plen - offset, chunk_buf.len);

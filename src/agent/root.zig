@@ -457,9 +457,18 @@ pub const Agent = struct {
         // Tool call loop
         var iteration: u32 = 0;
         while (iteration < self.max_tool_iterations) : (iteration += 1) {
-            // Build messages slice for provider
-            const messages = try self.buildMessageSlice();
-            defer self.allocator.free(messages);
+            var iter_arena = std.heap.ArenaAllocator.init(self.allocator);
+            defer iter_arena.deinit();
+            const arena = iter_arena.allocator();
+
+            // Build messages slice for provider (arena-owned; freed at end of iteration)
+            const messages = blk: {
+                const m = try arena.alloc(ChatMessage, self.history.items.len);
+                for (self.history.items, 0..) |*msg, i| {
+                    m[i] = msg.toChatMessage();
+                }
+                break :blk m;
+            };
 
             const timer_start = std.time.milliTimestamp();
             const is_streaming = self.stream_callback != null and self.provider.supportsStreaming();
@@ -701,18 +710,16 @@ pub const Agent = struct {
             }
 
             // Format tool results, scrub credentials, add reflection prompt, and add to history
-            const formatted_results = try dispatcher.formatToolResults(self.allocator, results_buf.items);
-            defer self.allocator.free(formatted_results);
-            const scrubbed_results = try providers.scrubToolOutput(self.allocator, formatted_results);
-            defer self.allocator.free(scrubbed_results);
+            const formatted_results = try dispatcher.formatToolResults(arena, results_buf.items);
+            const scrubbed_results = try providers.scrubToolOutput(arena, formatted_results);
             const with_reflection = try std.fmt.allocPrint(
-                self.allocator,
+                arena,
                 "{s}\n\nReflect on the tool results above and decide your next steps.",
                 .{scrubbed_results},
             );
             try self.history.append(self.allocator, .{
                 .role = .user,
-                .content = with_reflection,
+                .content = try self.allocator.dupe(u8, with_reflection),
             });
 
             self.trimHistory();
