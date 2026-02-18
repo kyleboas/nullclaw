@@ -366,24 +366,22 @@ pub const HotplugMonitor = struct {
 /// Start a hotplug monitor that calls `callback` on USB device events.
 /// On Linux: spawns udevadm monitor and parses its output.
 /// On macOS: stub monitor (sleeps until stopped).
-/// On other platforms: returns a no-op monitor with running=false.
-pub fn startHotplugMonitor(allocator: std.mem.Allocator, callback: *const fn (event: DeviceEvent) void) !HotplugMonitor {
-    var monitor = HotplugMonitor{
-        .allocator = allocator,
-        .callback = callback,
-    };
+/// On other platforms: no-op (monitor.running stays false).
+///
+/// Caller must initialize `monitor` fields (allocator, callback) before calling.
+/// The monitor must remain at a stable address until stopHotplugMonitor() returns.
+pub fn startHotplugMonitor(monitor: *HotplugMonitor) !void {
     switch (comptime builtin.os.tag) {
         .linux => {
             monitor.running = std.atomic.Value(bool).init(true);
-            monitor.thread = try std.Thread.spawn(.{}, runLinuxMonitor, .{&monitor});
+            monitor.thread = try std.Thread.spawn(.{}, runLinuxMonitor, .{monitor});
         },
         .macos => {
             monitor.running = std.atomic.Value(bool).init(true);
-            monitor.thread = try std.Thread.spawn(.{}, runMacosMonitor, .{&monitor});
+            monitor.thread = try std.Thread.spawn(.{}, runMacosMonitor, .{monitor});
         },
         else => {},
     }
-    return monitor;
 }
 
 /// Stop the hotplug monitor and wait for the thread to finish.
@@ -799,9 +797,13 @@ test "HotplugMonitor initial state" {
 }
 
 test "startHotplugMonitor returns without error" {
-    var monitor = try startHotplugMonitor(std.testing.allocator, &struct {
-        fn cb(_: DeviceEvent) void {}
-    }.cb);
+    var monitor = HotplugMonitor{
+        .allocator = std.testing.allocator,
+        .callback = &struct {
+            fn cb(_: DeviceEvent) void {}
+        }.cb,
+    };
+    try startHotplugMonitor(&monitor);
     // On macOS: stub thread runs; on Linux: udevadm may fail but monitor still valid
     // On other platforms: no-op
     stopHotplugMonitor(&monitor);
@@ -809,9 +811,13 @@ test "startHotplugMonitor returns without error" {
 }
 
 test "stopHotplugMonitor is safe to call twice" {
-    var monitor = try startHotplugMonitor(std.testing.allocator, &struct {
-        fn cb(_: DeviceEvent) void {}
-    }.cb);
+    var monitor = HotplugMonitor{
+        .allocator = std.testing.allocator,
+        .callback = &struct {
+            fn cb(_: DeviceEvent) void {}
+        }.cb,
+    };
+    try startHotplugMonitor(&monitor);
     stopHotplugMonitor(&monitor);
     stopHotplugMonitor(&monitor); // second call should be safe
     try std.testing.expect(monitor.thread == null);
