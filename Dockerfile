@@ -6,9 +6,13 @@ FROM alpine:3.21 AS builder
 RUN apk add --no-cache zig sqlite-dev musl-dev
 
 WORKDIR /app
-COPY build.zig build.zig.zon src/ src/
 
-RUN zig build -Doptimize=ReleaseSmall
+# Copy build files to /app (NOT /app/src), so `zig build` can find build.zig
+COPY build.zig build.zig.zon ./
+COPY src/ src/
+
+# Alpine sqlite is typically in /usr/include and /usr/lib
+RUN zig build -Doptimize=ReleaseSmall -Dsqlite-include=/usr/include -Dsqlite-lib=/usr/lib
 
 # ── Stage 2: Config Prep ─────────────────────────────────────
 FROM busybox:1.37 AS permissions
