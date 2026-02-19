@@ -36,6 +36,7 @@ FROM busybox:1.37 AS permissions
 
 RUN mkdir -p /nullclaw-data/.nullclaw /nullclaw-data/workspace
 
+# IMPORTANT: host must be an IP without brackets (use 0.0.0.0 or ::)
 RUN cat > /nullclaw-data/.nullclaw/config.json << 'EOF'
 {
   "api_key": "",
@@ -44,7 +45,7 @@ RUN cat > /nullclaw-data/.nullclaw/config.json << 'EOF'
   "default_temperature": 0.7,
   "gateway": {
     "port": 3000,
-    "host": "[::]",
+    "host": "0.0.0.0",
     "allow_public_bind": true
   }
 }
@@ -57,8 +58,7 @@ FROM gcr.io/distroless/cc-debian13:nonroot AS release
 
 COPY --from=builder /app/zig-out/bin/nullclaw /usr/local/bin/nullclaw
 
-# Distroless does not include SQLite; copy the runtime library from the builder.
-# Wildcard covers both amd64 (x86_64-linux-gnu) and arm64 (aarch64-linux-gnu).
+# Distroless doesn't include SQLite; copy the runtime library from the builder.
 COPY --from=builder /usr/lib/*-linux-gnu/libsqlite3.so.0* /usr/lib/
 ENV LD_LIBRARY_PATH=/usr/lib
 
@@ -72,4 +72,4 @@ WORKDIR /nullclaw-data
 USER 65534:65534
 EXPOSE 3000
 ENTRYPOINT ["nullclaw"]
-CMD ["gateway", "--port", "3000", "--host", "[::]"]
+CMD ["gateway", "--port", "3000", "--host", "0.0.0.0"]
