@@ -56,6 +56,12 @@ RUN chown -R 65534:65534 /nullclaw-data
 FROM gcr.io/distroless/cc-debian13:nonroot AS release
 
 COPY --from=builder /app/zig-out/bin/nullclaw /usr/local/bin/nullclaw
+
+# Distroless does not include SQLite; copy the runtime library from the builder.
+# Wildcard covers both amd64 (x86_64-linux-gnu) and arm64 (aarch64-linux-gnu).
+COPY --from=builder /usr/lib/*-linux-gnu/libsqlite3.so.0* /usr/lib/
+ENV LD_LIBRARY_PATH=/usr/lib
+
 COPY --from=permissions /nullclaw-data /nullclaw-data
 
 ENV NULLCLAW_WORKSPACE=/nullclaw-data/workspace
