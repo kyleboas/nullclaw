@@ -1,10 +1,14 @@
 # syntax=docker/dockerfile:1
 
-# ── Stage 1: Build ────────────────────────────────────────────
-FROM alpine:3.21 AS builder
+# ── Stage 1: Build (Debian/glibc) ─────────────────────────────
+FROM debian:bookworm-slim AS builder
 
-# deps for downloading + sqlite headers/libs for linking
-RUN apk add --no-cache curl xz sqlite-dev musl-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl xz-utils \
+    build-essential \
+    pkg-config \
+    libsqlite3-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install Zig 0.15.2 (required by build.zig.zon)
 ARG ZIG_VERSION=0.15.2
@@ -22,13 +26,10 @@ RUN set -eux; \
     zig version
 
 WORKDIR /app
-
-# Copy build files to /app (NOT /app/src), so `zig build` can find them
 COPY build.zig build.zig.zon ./
 COPY src/ src/
 
-# Alpine sqlite is typically in /usr/include and /usr/lib
-RUN zig build -Doptimize=ReleaseSmall -Dsqlite-include=/usr/include -Dsqlite-lib=/usr/lib
+RUN zig build -Doptimize=ReleaseSmall
 
 # ── Stage 2: Config Prep ─────────────────────────────────────
 FROM busybox:1.37 AS permissions
