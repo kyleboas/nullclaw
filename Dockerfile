@@ -3,11 +3,27 @@
 # ── Stage 1: Build ────────────────────────────────────────────
 FROM alpine:3.21 AS builder
 
-RUN apk add --no-cache zig sqlite-dev musl-dev
+# deps for downloading + sqlite headers/libs for linking
+RUN apk add --no-cache curl xz sqlite-dev musl-dev
+
+# Install Zig 0.15.2 (required by build.zig.zon)
+ARG ZIG_VERSION=0.15.2
+ARG TARGETARCH
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) ZIG_ARCH="x86_64" ;; \
+      arm64) ZIG_ARCH="aarch64" ;; \
+      *) echo "Unsupported TARGETARCH=${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz" -o /tmp/zig.tar.xz; \
+    mkdir -p /opt; \
+    tar -xJf /tmp/zig.tar.xz -C /opt; \
+    ln -sf "/opt/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig" /usr/local/bin/zig; \
+    zig version
 
 WORKDIR /app
 
-# Copy build files to /app (NOT /app/src), so `zig build` can find build.zig
+# Copy build files to /app (NOT /app/src), so `zig build` can find them
 COPY build.zig build.zig.zon ./
 COPY src/ src/
 
